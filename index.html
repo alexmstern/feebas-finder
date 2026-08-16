@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feebas Finder</title>
+    <style>
+        table { border-collapse: collapse; }
+        td { width: 14px; height: 14px; border: 1px solid #ccc; }
+        td.tile { background: #cde; }
+        td.feebas-1 { background: #2a6; }
+        td.feebas-2 { background: #83c; }
+        td.feebas-both { background: linear-gradient(135deg, #2a6 50%, #83c 50%); }
+    </style>
+</head>
+<body>
+    <h1>Feebas Finder</h1>
+    <label>Yesterday's lotto number: <input id="prevLotto" type="number" min="0" max="65535"></label><br>
+    <label>Today's lotto number: <input id="currLotto" type="number" min="0" max="65535"></label><br>
+    <button id="findBtn">Find</button>
+
+    <div id="results"></div>
+
+    <script src="feebas_seed.js"></script>
+    <script>
+        const TILE_SET = new Set(FEEBAS_TILES.map(([x, y]) => `${x},${y}`));
+        const X_MIN = 9, X_MAX = 26, Y_MIN = 18, Y_MAX = 51;
+
+        function renderGrid(results) {
+            const owners = new Map(); // "x,y" -> Set of result indices (0 or 1)
+            results.forEach(({ tiles }, i) => {
+                for (const [x, y] of tiles) {
+                    const key = `${x},${y}`;
+                    if (!owners.has(key)) owners.set(key, new Set());
+                    owners.get(key).add(i);
+                }
+            });
+
+            const table = document.createElement('table');
+            for (let y = Y_MIN; y <= Y_MAX; y++) {
+                const row = document.createElement('tr');
+                for (let x = X_MIN; x <= X_MAX; x++) {
+                    const key = `${x},${y}`;
+                    const cell = document.createElement('td');
+                    const owner = owners.get(key);
+                    if (owner && owner.has(0) && owner.has(1)) {
+                        cell.className = 'feebas-both';
+                    } else if (owner && owner.has(0)) {
+                        cell.className = 'feebas-1';
+                    } else if (owner && owner.has(1)) {
+                        cell.className = 'feebas-2';
+                    } else if (TILE_SET.has(key)) {
+                        cell.className = 'tile';
+                    }
+                    row.appendChild(cell);
+                }
+                table.appendChild(row);
+            }
+            return table;
+        }
+
+        document.getElementById('findBtn').addEventListener('click', () => {
+            const prevLotto = Number(document.getElementById('prevLotto').value);
+            const currLotto = Number(document.getElementById('currLotto').value);
+            const results = findFeebasTiles(prevLotto, currLotto);
+
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+            if (results.length === 0) {
+                resultsDiv.textContent = 'No matching seeds found.';
+                return;
+            }
+            const heading = document.createElement('p');
+            heading.textContent = `Seeds: ${results.map(r => r.seed).join(', ')}`;
+            resultsDiv.appendChild(heading);
+            resultsDiv.appendChild(renderGrid(results));
+        });
+    </script>
+</body>
+</html>
