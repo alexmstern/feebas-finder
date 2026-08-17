@@ -4,76 +4,88 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Feebas Finder</title>
+    <link rel="icon" type="image/png" href="feebas-ms.png">
     <style>
-        table { border-collapse: collapse; }
-        td { width: 14px; height: 14px; border: 1px solid #ccc; }
-        td.tile { background: #cde; }
-        td.feebas-1 { background: #2a6; }
-        td.feebas-2 { background: #83c; }
-        td.feebas-both { background: linear-gradient(135deg, #2a6 50%, #83c 50%); }
+        :root { --page-bg: #4a4a63; }
+        html, body {
+            margin: 0;
+            background: var(--page-bg);
+        }
+        body { padding: 16px; box-sizing: border-box; color: #ece9f2; }
+        #canvasContainer {
+            position: relative;
+            width: 100%;
+            height: 60vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #lakeImg { display: block; max-width: 100%; max-height: 100%; }
+        #lakeOverlay { position: absolute; pointer-events: none; }
+        #highlightLayer { position: absolute; inset: 0; }
+        #results.error { color: #ff8fa3; }
     </style>
 </head>
 <body>
     <h1>Feebas Finder</h1>
-    <label>Yesterday's lotto number: <input id="prevLotto" type="number" min="0" max="65535"></label><br>
-    <label>Today's lotto number: <input id="currLotto" type="number" min="0" max="65535"></label><br>
+    <label>Yesterday's lotto number: <input id="prevLotto" type="number" min="0" max="65535" required></label><br>
+    <label>Today's lotto number: <input id="currLotto" type="number" min="0" max="65535" required></label><br>
     <button id="findBtn">Find</button>
 
     <div id="results"></div>
+    <div id="canvasContainer">
+        <img id="lakeImg" src="assets/lake.webp" alt="Top-down view of the lake's water tile grid">
+        <div id="lakeOverlay">
+            <div id="highlightLayer"></div>
+        </div>
+    </div>
 
     <script src="feebas_seed.js"></script>
-    <script>
-        const TILE_SET = new Set(FEEBAS_TILES.map(([x, y]) => `${x},${y}`));
-        const X_MIN = 9, X_MAX = 26, Y_MIN = 18, Y_MAX = 51;
+    <script type="module">
+        import { initLake, drawHighlights, clearHighlights } from './lake.js';
 
-        function renderGrid(results) {
-            const owners = new Map(); // "x,y" -> Set of result indices (0 or 1)
-            results.forEach(({ tiles }, i) => {
-                for (const [x, y] of tiles) {
-                    const key = `${x},${y}`;
-                    if (!owners.has(key)) owners.set(key, new Set());
-                    owners.get(key).add(i);
+        const resultsDiv = document.getElementById('results');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const lakeReady = initLake(canvasContainer, {
+            onStatus: (status) => { resultsDiv.textContent = status; },
+        });
+
+        const isValidLotto = (n) => Number.isInteger(n) && n >= 0 && n <= 65535;
+        const parseLotto = (el) => el.value.trim() === '' ? NaN : Number(el.value);
+
+        // maxlength isn't enforced on type="number" inputs, so truncate manually.
+        for (const id of ['prevLotto', 'currLotto']) {
+            document.getElementById(id).addEventListener('input', (e) => {
+                if (e.target.value.length > 5) {
+                    e.target.value = e.target.value.slice(0, 5);
                 }
             });
-
-            const table = document.createElement('table');
-            for (let y = Y_MIN; y <= Y_MAX; y++) {
-                const row = document.createElement('tr');
-                for (let x = X_MIN; x <= X_MAX; x++) {
-                    const key = `${x},${y}`;
-                    const cell = document.createElement('td');
-                    const owner = owners.get(key);
-                    if (owner && owner.has(0) && owner.has(1)) {
-                        cell.className = 'feebas-both';
-                    } else if (owner && owner.has(0)) {
-                        cell.className = 'feebas-1';
-                    } else if (owner && owner.has(1)) {
-                        cell.className = 'feebas-2';
-                    } else if (TILE_SET.has(key)) {
-                        cell.className = 'tile';
-                    }
-                    row.appendChild(cell);
-                }
-                table.appendChild(row);
-            }
-            return table;
         }
 
-        document.getElementById('findBtn').addEventListener('click', () => {
-            const prevLotto = Number(document.getElementById('prevLotto').value);
-            const currLotto = Number(document.getElementById('currLotto').value);
-            const results = findFeebasTiles(prevLotto, currLotto);
+        document.getElementById('findBtn').addEventListener('click', async () => {
+            const prevLotto = parseLotto(document.getElementById('prevLotto'));
+            const currLotto = parseLotto(document.getElementById('currLotto'));
 
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = '';
-            if (results.length === 0) {
-                resultsDiv.textContent = 'No matching seeds found.';
+            if (!isValidLotto(prevLotto) || !isValidLotto(currLotto)) {
+                resultsDiv.textContent = 'Enter both lottery numbers as whole numbers between 0 and 65535.';
+                resultsDiv.className = 'error';
+                clearHighlights();
                 return;
             }
-            const heading = document.createElement('p');
-            heading.textContent = `Seeds: ${results.map(r => r.seed).join(', ')}`;
-            resultsDiv.appendChild(heading);
-            resultsDiv.appendChild(renderGrid(results));
+
+            const results = findFeebasTiles(prevLotto, currLotto);
+
+            await lakeReady;
+
+            if (results.length === 0) {
+                resultsDiv.textContent = 'No matching seeds found -- double check both numbers (they must be from consecutive days).';
+                resultsDiv.className = 'error';
+                clearHighlights();
+                return;
+            }
+            resultsDiv.className = '';
+            resultsDiv.textContent = `Seeds: ${results.map(r => r.seed).join(', ')}`;
+            drawHighlights(results);
         });
     </script>
 </body>
