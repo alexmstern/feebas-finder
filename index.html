@@ -6,61 +6,187 @@
     <title>Feebas Finder</title>
     <link rel="icon" type="image/png" href="feebas-ms.png">
     <style>
-        :root { --page-bg: #4a4a63; }
+        /* The actual Diamond/Pearl/Platinum dialogue font (fan recreation by
+           kazumi213, 2009 -- distributed as "Pokemon DP Pro" on FontStruct
+           under CC BY-SA 3.0). */
+        @font-face {
+            font-family: "Pokemon DPPt";
+            src: url("assets/fonts/PokemonDPPt.ttf") format("truetype");
+            font-display: swap;
+        }
+        :root {
+            --page-bg: #4a4a63;
+            --navy-deep: #100f16;
+            --ink: #2b2833;
+        }
         html, body {
             margin: 0;
             background: var(--page-bg);
         }
         body {
-            padding: 16px 16px 16px 48px;
+            padding: 16px;
             box-sizing: border-box;
             color: #ece9f2;
             min-height: 100vh;
             display: flex;
             align-items: center;
+            justify-content: center;
+            font-family: "Pokemon DPPt", monospace;
+        }
+        h1 {
+            letter-spacing: 0.02em;
+            text-shadow: 2px 2px 0 var(--navy-deep);
+            margin: 0;
+        }
+        #searchHeader {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+        #feebasSprite {
+            height: 90px;
+            width: auto;
+            image-rendering: pixelated;
+            filter: drop-shadow(2px 2px 0 var(--navy-deep));
         }
         #appLayout {
-            display: flex;
-            flex-direction: row;
+            display: grid;
+            grid-template-columns: minmax(280px, 1fr) auto;
             align-items: center;
-            gap: 24px;
-            width: 100%;
+            gap: clamp(48px, 10vw, 200px);
+            width: min(85vw, 1200px);
         }
-        #formPanel { flex: 0 0 280px; }
-        #findBtn { display: block; margin: 0 auto; }
+        #formPanel { width: 280px; justify-self: end; }
+
+        #findBtn {
+            display: block;
+            width: 100%;
+            min-height: 68px;
+            margin-top: 4px;
+            padding: 10px 12px;
+            box-sizing: border-box;
+            border-style: solid;
+            border-width: 20px 44px 8px 46px;
+            border-image-source: url("assets/find_feebas_button.png");
+            border-image-slice: 10 22 4 23 fill;
+            border-image-width: 20px 44px 8px 46px;
+            border-image-repeat: stretch;
+            image-rendering: pixelated;
+            background: transparent;
+            color: #fff;
+            text-shadow: 2px 2px 0 rgba(40, 10, 70, 0.6);
+            font-family: "Pokemon DPPt", monospace;
+            font-size: 18px;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+            transform: scale(1);
+            transform-origin: center;
+            transition: transform 0.04s linear;
+        }
+        #findBtn:hover { filter: brightness(1.08); }
+
+        #findBtn:active {
+            transform: scale(0.96, 0.9);
+            transition: transform 0.03s linear;
+        }
         #canvasContainer {
             position: relative;
-            flex: 1 1 auto;
-            min-width: 0;
+            justify-self: start;
             height: 80vh;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .fieldRow { display: flex; gap: 10px; margin-bottom: 10px; }
-        .fieldRow label { display: flex; flex-direction: column; flex: 1; }
-        .fieldRow input { width: 100%; box-sizing: border-box; }
+        .fieldRow label {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        .fieldLabel {
+            font-family: "Pokemon DPPt", monospace;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            font-size: 15px;
+            color: #ece9f2;
+            margin-bottom: 4px;
+            padding-left: 6px;
+        }
+        /* DS-textbox-style input: same 9-slice technique as #findBtn, using
+           a matching rounded pixel-art box asset instead of a CSS border. */
+        .fieldRow input {
+            width: 100%;
+            box-sizing: border-box;
+            background: #e7e7e7;
+            background-clip: padding-box;
+            border-style: solid;
+            border-width: 8px 14px;
+            border-image-source: url("assets/search_box.png");
+            border-image-slice: 4 7 4 7;
+            border-image-width: 8px 14px;
+            border-image-repeat: stretch;
+            image-rendering: pixelated;
+            color: var(--ink);
+            font-family: "Pokemon DPPt", monospace;
+            font-size: 18px;
+            letter-spacing: 0.02em;
+            padding: 6px 4px;
+            margin-top: 4px;
+            outline: none;
+            appearance: textfield;
+            -moz-appearance: textfield;
+        }
+        .fieldRow input::-webkit-outer-spin-button,
+        .fieldRow input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
         @media (max-width: 720px) {
-            body { display: block; min-height: 0; padding: 16px; }
-            #appLayout { flex-direction: column; align-items: flex-start; }
-            #formPanel { flex-basis: auto; width: 100%; }
-            #canvasContainer { width: 100%; height: 72vh; }
+
+            body {
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+                height: 100dvh;
+                padding: 12px;
+                overflow: hidden;
+            }
+            #appLayout {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                width: 100%;
+                height: 100%;
+                gap: 12px;
+            }
+            #formPanel { width: 100%; justify-self: auto; flex: 0 0 auto; }
+            #canvasContainer { width: 100%; justify-self: auto; flex: 1 1 auto; min-height: 0; height: auto; align-items: flex-start; }
+            h1 { font-size: 22px; }
+            #searchHeader { margin-bottom: 4px; }
+            #feebasSprite { height: 56px; }
+            .fieldRow { margin-bottom: 6px; }
+            #results { margin-top: 8px; }
         }
         #lakeImg { display: block; max-width: 100%; max-height: 100%; }
         #lakeOverlay { position: absolute; pointer-events: none; }
         #highlightLayer { position: absolute; inset: 0; }
+        #results { margin-top: 20px; }
         #results.error { color: #ff8fa3; }
     </style>
 </head>
 <body>
     <div id="appLayout">
         <div id="formPanel">
-            <h1>Feebas Finder</h1>
-            <div class="fieldRow">
-                <label>Yesterday <input id="prevLotto" type="number" min="0" max="65535" required></label>
-                <label>Today <input id="currLotto" type="number" min="0" max="65535" required></label>
+            <div id="searchHeader">
+                <img id="feebasSprite" src="feebas-bs-still.png" alt="Feebas">
+                <h1>Feebas Finder</h1>
             </div>
-            <button id="findBtn">Find</button>
+            <div class="fieldRow">
+                <label><span class="fieldLabel">Yesterday</span><input id="prevLotto" type="number" min="0" max="65535" required></label>
+                <label><span class="fieldLabel">Today</span><input id="currLotto" type="number" min="0" max="65535" required></label>
+            </div>
+            <button id="findBtn">FIND FEEBAS!</button>
 
             <div id="results"></div>
         </div>
@@ -82,6 +208,18 @@
             onStatus: (status) => { resultsDiv.textContent = status; },
         });
 
+        const FEEBAS_ANIM_DURATION_MS = 4600;
+        const feebasSprite = document.getElementById('feebasSprite');
+        let feebasAnimTimer = null;
+        function playFeebasAnimation() {
+            clearTimeout(feebasAnimTimer);
+            feebasSprite.src = 'feebas-bs.png';
+            feebasAnimTimer = setTimeout(() => {
+                feebasSprite.src = 'feebas-bs-still.png';
+            }, FEEBAS_ANIM_DURATION_MS);
+        }
+        playFeebasAnimation();
+
         const isValidLotto = (n) => Number.isInteger(n) && n >= 0 && n <= 65535;
         const parseLotto = (el) => el.value.trim() === '' ? NaN : Number(el.value);
 
@@ -95,6 +233,7 @@
         }
 
         document.getElementById('findBtn').addEventListener('click', async () => {
+            playFeebasAnimation();
             const prevLotto = parseLotto(document.getElementById('prevLotto'));
             const currLotto = parseLotto(document.getElementById('currLotto'));
 
@@ -116,7 +255,7 @@
                 return;
             }
             resultsDiv.className = '';
-            resultsDiv.textContent = `Seeds: ${results.map(r => r.seed).join(', ')}`;
+            resultsDiv.textContent = '';
             drawHighlights(results);
         });
     </script>
